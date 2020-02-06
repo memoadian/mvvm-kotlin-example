@@ -14,11 +14,11 @@ open class AppExecutors (
     val mainThread: Executor
 ) {
     @Inject
-    constructor(): this(){
+    constructor(): this(
         Executors.newSingleThreadExecutor(),//encola las tareas una tras otra
         Executors.newFixedThreadPool(3),//numero de hilos a llamar al web service
         MainThreadExecutor()//ejecutor del hilo principal
-    }
+    )
 
     fun diskIO() :Executor {
         return diskIO
