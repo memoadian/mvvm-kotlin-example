@@ -8,5 +8,5 @@ class RepoSearchResponse (
     @SerializedName("items")
     val items: List<Repo>
 ) {
-    var nextPages: Int? = null
+    var nextPage: Int? = null
 }

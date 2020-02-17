@@ -10,7 +10,7 @@ import com.memoadian.mvvmkotlin.db.GithubTypeConverters
 @TypeConverters(GithubTypeConverters::class)
 class RepoSearchResult (
     val query: String,
-    val reportIds: List<Int>,
+    val repoIds: List<Int>,
     val totalCount: Int,
     val next: Int?
 ) {

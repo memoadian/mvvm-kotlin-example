@@ -35,7 +35,7 @@ class FetchNextSearchPageTask (
             when (apiResponse) {
                 is ApiSuccessResponse->{
                     val ids = arrayListOf<Int>()
-                    ids.addAll(currentData.reportIds)
+                    ids.addAll(currentData.repoIds)
                     ids.addAll(apiResponse.body.items.map{it.id})
                     val merge = RepoSearchResult(query, ids, apiResponse.body.total, apiResponse.nextPage)
                     try {

@@ -1,14 +1,20 @@
 package com.memoadian.mvvmkotlin.repository
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.Transformations
 import com.memoadian.mvvmkotlin.AppExecutors
 import com.memoadian.mvvmkotlin.api.ApiResponse
+import com.memoadian.mvvmkotlin.api.ApiSuccessResponse
 import com.memoadian.mvvmkotlin.api.GithubApi
 import com.memoadian.mvvmkotlin.db.GithubDb
 import com.memoadian.mvvmkotlin.db.RepoDao
 import com.memoadian.mvvmkotlin.models.Contributor
 import com.memoadian.mvvmkotlin.models.Repo
+import com.memoadian.mvvmkotlin.models.RepoSearchResponse
+import com.memoadian.mvvmkotlin.models.RepoSearchResult
+import com.memoadian.mvvmkotlin.utils.AbsentLiveData
 import com.memoadian.mvvmkotlin.utils.RateLimiter
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -117,6 +123,54 @@ class RepoRepository @Inject constructor(
         appExecutors.netWorkIO().execute(fetchNextSearchPageTaske)
 
         return fetchNextSearchPageTaske.liveData
+    }
+
+    fun search (query: String): LiveData<Resource<List<Repo>>>{
+        return object : NetWorkBoundResource<List<Repo>, RepoSearchResponse>(appExecutors){
+            override fun loadFromDb(): LiveData<List<Repo>> {
+                return Transformations.switchMap (repoDao.search(query)) {searchData->
+                    if (searchData == null) {
+                        AbsentLiveData.create()
+                    } else {
+                        repoDao.loadOrdered(searchData.repoIds)
+                    }
+                }
+            }
+
+            override fun shoouldFetch(data: List<Repo>?): Boolean {
+                return data == null
+            }
+
+            override fun saveCallResult(item: RepoSearchResponse) {
+                val reposIds = item.items.map {
+                    it.id
+                }
+                val repoSearchResult = RepoSearchResult(
+                    query = query,
+                    repoIds = reposIds,
+                    totalCount = item.total,
+                    next = item.nextPage
+                )
+                db.beginTransaction()
+                try {
+                    repoDao.insertRepos(item.items)
+                    repoDao.insert(repoSearchResult)
+                } finally {
+                    db.endTransaction()
+                }
+            }
+
+            override fun createCall(): LiveData<ApiResponse<RepoSearchResponse>> {
+                return githubApi.searchRepos(query)
+            }
+
+            override fun processResponse(response: ApiSuccessResponse<RepoSearchResponse>): RepoSearchResponse {
+                val body = response.body
+                body.nextPage = response.nextPage
+                return body
+            }
+
+        }.asLiveData()
     }
 
 }
